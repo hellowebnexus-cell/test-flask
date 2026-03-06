@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <div class="glass-panel">
@@ -15,33 +17,48 @@
             <div class="result-box" id="resultBox">
                 <span id="resultText">Click to generate</span>
             </div>
-            <button id="generateBtn" class="primary-btn">Generate Now</button>
+            <div class="button-group">
+                <button id="generateBtn" class="primary-btn">Generate Now</button>
+                <button id="saveBtn" class="secondary-btn" disabled>Save</button>
+            </div>
+
+            <div class="history-section">
+                <h2>Saved Strings</h2>
+                <div id="historyList" class="history-list">
+                    <!-- History items will be loaded here -->
+                </div>
+            </div>
         </div>
     </div>
-    
+
     <script>
+        let currentString = '';
+
         document.getElementById('generateBtn').addEventListener('click', async () => {
             const btn = document.getElementById('generateBtn');
+            const saveBtn = document.getElementById('saveBtn');
             const resultText = document.getElementById('resultText');
             const resultBox = document.getElementById('resultBox');
-            
+
             // UI Loading state
             btn.classList.add('loading');
             btn.disabled = true;
+            saveBtn.disabled = true;
             resultText.style.opacity = '0.5';
             resultBox.style.transform = 'scale(0.98)';
 
             try {
                 const response = await fetch('/generate');
                 const data = await response.json();
-                
-                // Simulate a slight delay for aesthetic animation purposes
+
                 setTimeout(() => {
-                    resultText.textContent = data.result;
+                    currentString = data.result;
+                    resultText.textContent = currentString;
                     resultText.style.opacity = '1';
                     resultBox.style.transform = 'scale(1)';
                     btn.classList.remove('loading');
                     btn.disabled = false;
+                    saveBtn.disabled = false;
                 }, 300);
             } catch (error) {
                 resultText.textContent = 'Error during generation';
@@ -49,8 +66,78 @@
                 resultBox.style.transform = 'scale(1)';
                 btn.classList.remove('loading');
                 btn.disabled = false;
+                saveBtn.disabled = true;
             }
         });
+
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            if (!currentString) return;
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.classList.add('loading');
+            saveBtn.disabled = true;
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ result: currentString })
+                });
+                if (response.ok) {
+                    saveBtn.innerText = 'Saved!';
+                    setTimeout(() => {
+                        saveBtn.innerText = 'Save';
+                        saveBtn.classList.remove('loading');
+                        // Optional: Keep disabled until a new string is generated
+                        saveBtn.disabled = true;
+                    }, 1500);
+                    loadHistory();
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (error) {
+                saveBtn.innerText = 'Error';
+                saveBtn.classList.remove('loading');
+                saveBtn.disabled = false;
+            }
+        });
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+                const list = document.getElementById('historyList');
+                list.innerHTML = '';
+
+                if (data.history.length === 0) {
+                    list.innerHTML = '<div class="history-empty">No strings saved yet.</div>';
+                    return;
+                }
+
+                data.history.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+
+                    const strSpan = document.createElement('span');
+                    strSpan.className = 'history-text';
+                    strSpan.textContent = item.result;
+
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'history-time';
+                    const date = new Date(item.created_at + 'Z');
+                    timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    div.appendChild(strSpan);
+                    div.appendChild(timeSpan);
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Failed to load history:', error);
+            }
+        }
+
+        // Load history on initial page load
+        loadHistory();
     </script>
 </body>
+
 </html>
