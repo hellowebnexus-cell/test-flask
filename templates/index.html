@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus | Random Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-panel">
+            <h1>Nexus Generator</h1>
+            <p>Generate a secure, randomized cryptographic string.</p>
+            <div class="result-box" id="resultBox">
+                <span id="resultText">Click to generate</span>
+            </div>
+            <button id="generateBtn" class="primary-btn">Generate Now</button>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('generateBtn');
+            const resultText = document.getElementById('resultText');
+            const resultBox = document.getElementById('resultBox');
+            
+            // UI Loading state
+            btn.classList.add('loading');
+            btn.disabled = true;
+            resultText.style.opacity = '0.5';
+            resultBox.style.transform = 'scale(0.98)';
+
+            try {
+                const response = await fetch('/generate');
+                const data = await response.json();
+                
+                // Simulate a slight delay for aesthetic animation purposes
+                setTimeout(() => {
+                    resultText.textContent = data.result;
+                    resultText.style.opacity = '1';
+                    resultBox.style.transform = 'scale(1)';
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                }, 300);
+            } catch (error) {
+                resultText.textContent = 'Error during generation';
+                resultText.style.opacity = '1';
+                resultBox.style.transform = 'scale(1)';
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
